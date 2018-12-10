@@ -178,6 +178,10 @@ struct tiny_gfaidx_t{
         entry = iden_to_entry.at( (char*) iden);
     };
 
+    void getSequenceEntry(const char* iden, tiny_gfaidx_base_entry_t*& entry) const{
+        entry = iden_to_entry.at( getTypeID(iden, strlen(iden), SEQUENCE) );
+    };
+
     void write(ostream& os) const {
         std::vector<tiny_gfaidx_base_entry_t*> sorted_entries;
         for (auto x : iden_to_entry){
@@ -301,7 +305,21 @@ inline void parseGFAIDX(const char* GFAFileName, tiny_gfaidx_t& gfaidx){
 };
 
 inline void getSequence( const tiny_gfaidx_t& gfai, const char* seqname, char*& seq){
+    
+    tiny_gfaidx_base_entry_t* entry;
+    if (gfai.hasSequenceID(seqname)){
+        gfai.getSequenceEntry(seqname, entry);
+        uint32_t sz = entry->line_char_len;
+        seq = new char[sz + 1];
+        fseek64(gfai.gfa, entry->offset, SEEK_SET);
+        if (fread(seq, sizeof(char), sz, gfai.gfa)){
+           seq[sz] = '\0';
+        }
 
+    }
+    else{
+        cerr << "No sequence ID " << seqname << " found." << endl;
+    }
 };
 
 
