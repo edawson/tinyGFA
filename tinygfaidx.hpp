@@ -132,8 +132,8 @@ struct tiny_gfaidx_t{
             fclose(gfa);
         }
         for (auto k : iden_to_entry){
-            delete [] k.second->iden;
-            delete k.second;
+            //delete [] k.second->iden;
+            //delete k.second;
         }
     };
 
@@ -236,6 +236,7 @@ inline void createGFAIDX(const char* gfaName, tiny_gfaidx_t& gfai){
                 entry->offset = offset;
                 entry->line_char_len = line_length;
                 gfai.add(entry);
+                entry = new tiny_gfaidx_base_entry_t();
             }
             
             offset += line_length + 1;
