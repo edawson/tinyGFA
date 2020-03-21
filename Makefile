@@ -11,6 +11,9 @@ indexseq: examples/index.cpp pliib/pliib.hpp tinygfaidx.hpp
 tgfa: tgfa.cpp tinygfa.hpp pliib/pliib.hpp
 	$(CXX) $(DEBUGFLAGS) -o $@ $^ $(LD_INC_FLAGS)
 
+fast-tgfa: tgfa.cpp tinygfa.hpp pliib/pliib.hpp
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_INC_FLAGS)
+
 clean:
 	$(RM) getseq
 	$(RM) indexseq

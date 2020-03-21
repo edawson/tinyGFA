@@ -37,7 +37,9 @@ namespace tgfa{
         
     };
     struct header_elem{
-
+        char* key = nullptr;
+        std::uint8_t type;
+        char* val = nullptr;
     };
     struct sequence_elem{
         char* seq_id = nullptr;
@@ -51,17 +53,22 @@ namespace tgfa{
                 delete [] seq;
         }
         void set(char** splits, std::size_t split_count, std::size_t* split_lens, int spec = 2){
-            clear();
+            //clear();
             seq_id = splits[1];
-            if (spec == 1){
-
+            if (spec == 2){
+                seq_length = std::stoull(splits[2]);
+                seq = splits[3];
             }
-            else if (spec == 2){
-
+            else if (spec == 1){
+                seq = splits[2];
+                seq_length = strlen(seq);
             }
             for (std::size_t i = 3; i < split_count; ++i){
             }
 
+
+        }
+        sequence_elem(){
 
         }
         sequence_elem(char** splits, std::size_t split_count, std::size_t* split_lens){
@@ -173,6 +180,14 @@ namespace tgfa{
             std::uint64_t edge_count = 0;
             std::uint64_t group_count = 0;
             std::uint64_t path_count = 0;
+            std::string to_string(){
+                std::stringstream st;
+                st << "Number of sequences (nodes): " << sequence_count << std::endl <<
+                    "Number of edges: " << edge_count << std::endl <<
+                    "Number of groups: " << group_count << std::endl <<
+                    "Number of paths (ordered groups): " << path_count;
+                return st.str();
+            }
     };
 
     // Cheers to pfultz2.com/blog, 2014 09 02
@@ -221,14 +236,19 @@ namespace tgfa{
             char** splits;
             std::size_t split_count;
             std::size_t* split_lens;
+
+            sequence_elem s;
+            //edge_elem e;
+            //group_elem g;
             while(instream.getline(line, max_ln_size)){
                 auto line_type = determine_line_type(line);
                 if (line_type == SEQUENCE_LINE){
                     pliib::split(line, '\t', splits, split_count, split_lens);
-                        sequence_elem s (splits, split_count, split_lens);
+                        //sequence_elem s (splits, split_count, split_lens);
+                        s.set(splits, split_count, split_lens);
                         seq_func(s);
                         pliib::destroy_splits(splits, split_count, split_lens);
-                    ++stats.sequence_count;
+                        ++stats.sequence_count;
                 }
                 else if (line_type == EDGE_LINE || line_type == LINK_LINE || line_type == CONTAINED_LINE){
                     //if (edge_func != tgfa_empty_func){
