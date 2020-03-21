@@ -75,7 +75,7 @@ namespace tgfa{
             set(splits, split_count, split_lens);
         }
         ~sequence_elem(){
-            //clear();
+           // clear();
         }
 
         inline std::ostream& output(std::ostream& os, int spec = 2){
