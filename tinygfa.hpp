@@ -10,6 +10,7 @@
 
 #include <pliib.hpp>
 
+
 namespace tgfa{
 
     enum val_types {STRING_TYPE, INT_TYPE, FLOAT_TYPE};
@@ -67,7 +68,7 @@ namespace tgfa{
             set(splits, split_count, split_lens);
         }
         ~sequence_elem(){
-            clear();
+            //clear();
         }
 
         inline std::ostream& output(std::ostream& os, int spec = 2){
@@ -123,8 +124,8 @@ namespace tgfa{
             segment_count = num_seg_splits;
         }
         ~group_elem(){
-            delete [] group_id;
-            delete [] segment_ids;
+            //delete [] group_id;
+            //delete [] segment_ids;
         }
     };
 
