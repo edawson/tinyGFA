@@ -202,7 +202,8 @@ namespace tgfa{
             auto& seq_func,
             auto& edge_func,
             auto& group_func,
-            gfa_stat_t& stats){
+            gfa_stat_t& stats,
+            int spec = 2){
 
 
         std::ifstream instream;
@@ -213,7 +214,7 @@ namespace tgfa{
             exit(9);
         }
 
-        return parse_gfa_file(instream, seq_func, edge_func, group_func, stats);
+        return parse_gfa_file(instream, seq_func, edge_func, group_func, stats, spec);
 
 
     }
@@ -222,7 +223,8 @@ namespace tgfa{
             auto& seq_func,
             auto& edge_func,
             auto& group_func,
-            gfa_stat_t& stats){
+            gfa_stat_t& stats,
+            int spec){
 
             bool ret = true;
 
@@ -245,7 +247,7 @@ namespace tgfa{
                 if (line_type == SEQUENCE_LINE){
                     pliib::split(line, '\t', splits, split_count, split_lens);
                         //sequence_elem s (splits, split_count, split_lens);
-                        s.set(splits, split_count, split_lens);
+                        s.set(splits, split_count, split_lens, spec);
                         seq_func(s);
                         pliib::destroy_splits(splits, split_count, split_lens);
                         ++stats.sequence_count;
