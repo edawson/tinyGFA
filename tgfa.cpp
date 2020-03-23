@@ -50,7 +50,7 @@ int main_stats(int argc, char** argv){
 
     tgfa::gfa_stat_t stats;
 
-    auto s_func = [&](tgfa::sequence_elem s){};
+    auto s_func = [&](tgfa::sequence_elem s){std::cout << "S:" << s.seq_id << ":" << s.seq_length << std::endl;};
     auto e_func = [](tgfa::edge_elem e){};
     auto g_func = [](tgfa::group_elem g){};
 
@@ -61,6 +61,11 @@ int main_stats(int argc, char** argv){
             stats);
     std::cout << stats.to_string() << std::endl;
 
+}
+
+int main_index(int argc, char** argv){
+
+    return 0;
 }
 
 
