@@ -241,17 +241,23 @@ namespace tgfa{
         }
     };
     struct group_elem{
-        char* group_id;
+        char* group_id = nullptr;
         bool ordered = true;
         std::uint64_t segment_count;
         char** segment_ids = nullptr;
         std::vector<opt_elem> tags;
 
         group_elem(char**& tokens, std::size_t& token_count, std::size_t*& token_sizes){
+            set(tokens, token_count, token_sizes);
+        }
+        void set(char**& tokens, std::size_t& token_count, std::size_t*& token_sizes){
             group_id = tokens[1];
             std::size_t num_seg_splits;
             std::size_t* seg_split_lens;
             pliib::split(tokens[2], ',', segment_ids, num_seg_splits, seg_split_lens);
+            for (std::size_t i = 0; i < num_seg_splits; ++i){
+                pliib::slice(segment_ids[i], 0, seg_split_lens[i] - 1, segment_ids[i]);
+            }
             ordered = tokens[0][0] == 'O';
             segment_count = num_seg_splits;
         }
