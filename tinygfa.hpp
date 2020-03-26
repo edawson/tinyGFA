@@ -305,6 +305,19 @@ namespace tgfa{
             gfa_stat_t& stats,
             int spec = 2){
 
+        return parse_gfa_file(filename, seq_func, true, edge_func, true, group_func, true, stats, spec);
+        
+    }
+
+    inline bool parse_gfa_file(const char* filename,
+            auto& seq_func,
+            bool process_seqs,
+            auto& edge_func,
+            bool process_edges,
+            auto& group_func,
+            bool process_groups,
+            gfa_stat_t& stats,
+            int spec = 2){
 
         std::ifstream instream;
         instream.open(filename, std::ifstream::in);
@@ -314,10 +327,13 @@ namespace tgfa{
             exit(9);
         }
 
-        return parse_gfa_file(instream, seq_func, edge_func, group_func, stats, spec);
+        return parse_gfa_file(instream, seq_func, process_seqs, edge_func, process_edges, group_func, process_groups, stats, spec);
 
 
     }
+
+
+
 
     inline bool parse_gfa_file(std::ifstream& instream,
             auto& seq_func,
