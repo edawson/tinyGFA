@@ -186,6 +186,9 @@ int main(int argc, char** argv){
     else if (strcmp(argv[1], "index") == 0){
         return main_index(argc, argv);
     }
+    else if (strcmp(argv[1], "gaf_stats") == 0){
+        return main_gaf_stats(argc, argv);
+    }
     else{
         std::cerr << "Invalid subcommand [" << argv[1] << "]. Please choose a valid subcommand" << std::endl;
     }
