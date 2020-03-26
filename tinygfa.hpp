@@ -247,14 +247,15 @@ namespace tgfa{
         char** segment_ids = nullptr;
         std::vector<opt_elem> tags;
 
-        group_elem(char**& tokens, std::size_t& token_count, std::size_t*& token_sizes){
-            set(tokens, token_count, token_sizes);
+        group_elem(char**& tokens, std::size_t& token_count, std::size_t*& token_sizes, int spec = 2){
+            set(tokens, token_count, token_sizes, spec);
         }
-        void set(char**& tokens, std::size_t& token_count, std::size_t*& token_sizes){
+        void set(char**& tokens, std::size_t& token_count, std::size_t*& token_sizes, int spec = 2){
             group_id = tokens[1];
             std::size_t num_seg_splits;
             std::size_t* seg_split_lens;
-            pliib::split(tokens[2], ',', segment_ids, num_seg_splits, seg_split_lens);
+            char sep = spec == 2 ? ' ' : ',';
+            pliib::split(tokens[2], sep, segment_ids, num_seg_splits, seg_split_lens);
             for (std::size_t i = 0; i < num_seg_splits; ++i){
                 pliib::slice(segment_ids[i], 0, seg_split_lens[i] - 1, segment_ids[i]);
             }
