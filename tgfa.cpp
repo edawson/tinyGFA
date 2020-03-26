@@ -2,6 +2,7 @@
 #include <string>
 #include <getopt.h>
 #include "tinygfa.hpp"
+#include "tinygaf.hpp"
 
 
 int main_stats(int argc, char** argv){
@@ -121,6 +122,54 @@ int main_index(int argc, char** argv){
             g_func,
             stats
     );
+    return 0;
+}
+
+int main_gaf_stats(int argc, char** argv){
+    std::string gfile;
+    double spec = 0.1;
+
+    if (argc <= 2){
+        std::cerr << "Please provide a G[A]F (NOT GF[A]) file." << std::endl;
+        return -1;
+    }
+
+    optind = 2;
+    int c;
+    while (true){
+        static struct option long_options[] =
+        {
+            {"help", no_argument, 0, 'h'},
+            {"length", no_argument, 0, 'l'},
+            {"all", no_argument, 0, 'a'},
+            {"version", no_argument, 0, 'v'},
+            {"spec", required_argument, 0, 's'},
+            {0,0,0,0}
+        };
+    
+        int option_index = 0;
+        c = getopt_long(argc, argv, "hlavs:", long_options, &option_index);
+        if (c == -1){
+            break;
+        }
+
+        switch (c){
+
+            case '?':
+            case 'h':
+                // nodes, edges, all stats, edges, paths
+                exit(0);
+            default:
+                abort();
+        }
+    }
+
+    gfile = argv[optind];
+
+
+    auto gfunc = [&](tgfa::gaf_elem g){};
+    tgfa::gaf_stats stats;
+    tgfa::parse_gaf_file(gfile.c_str(), gfunc, stats, spec);
     return 0;
 }
 

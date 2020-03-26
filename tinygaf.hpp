@@ -1,7 +1,6 @@
 #include <string>
 #include <fstream>
 #include <vector>
-#include <mmap.h>
 #include <cstdint>
 #include <functional>
 
@@ -45,13 +44,13 @@ namespace tgfa{
         std::ostream& output(std::ostream& os){
             return os;
         }
-    }
+    };
 
     struct gaf_stats{
 
-    }
+    };
 
-    inline void parse_gaf_file(const char*& filename,
+    inline void parse_gaf_file(const char* filename,
             auto gaf_func,
             gaf_stats stats,
             double spec = 0.1){
