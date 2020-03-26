@@ -18,5 +18,7 @@ debug-tgfa: tgfa.cpp tinygfa.hpp pliib/pliib.hpp
 clean:
 	$(RM) getseq
 	$(RM) indexseq
+	$(RM) tgfa
+	$(RM) debug-tgfa
 
 .PHONY: utils clean

@@ -1,4 +1,4 @@
-name: C/C++ CI for pliib
+name: C/C++ CI for tinyGFA
 
 on: [push, pull_request]
 
