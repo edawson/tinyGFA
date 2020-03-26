@@ -2,6 +2,8 @@ tinyGFA
 -----------------
 Parse, index and get random access to GFA files.
 
+![C/C++ CI for tinyGFA](https://github.com/edawson/tinyGFA/workflows/C/C++%20CI%20for%20tinyGFA/badge.svg)
+
 ### Current Limitations
 Right now, we only index the Sequence lines of the
 GFA file. There is code to index other types of lines
