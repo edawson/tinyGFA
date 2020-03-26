@@ -97,6 +97,7 @@ struct tiny_gfaidx_base_entry_t{
     inline std::string to_string(){
         stringstream st;
         st << type << '\t' << iden << '\t' << offset << '\t' << line_char_len << endl;
+        return st.str();
     };
 
     void write_to_stream(std::ostream& os){
@@ -174,7 +175,7 @@ struct tiny_gfaidx_t{
         return hasBaseID(getTypeID( (char*) s, strlen(s), SEQUENCE));   
     };
 
-    void get(const char* iden, tiny_gfaidx_base_entry_t*& entry) const {
+    inline void get(const char* iden, tiny_gfaidx_base_entry_t*& entry) const {
         entry = iden_to_entry.at( (char*) iden);
     };
 

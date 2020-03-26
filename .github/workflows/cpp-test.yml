@@ -1,0 +1,16 @@
+name: C/C++ CI for tinyGFA
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    
+    steps:
+    - uses: actions/checkout@v2
+      with:
+          submodules: true
+    - name: make
+      run: make
+      #- name: make test
+      #run: make test

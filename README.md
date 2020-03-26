@@ -7,6 +7,7 @@ Right now, we only index the Sequence lines of the
 GFA file. There is code to index other types of lines
 but the implementation isn't yet finished.
 
+
 ### Overview
 GFA files provide a way to represent graph data structures from
 assemblies and variation graphs. GFA is analagous to FASTA for
@@ -27,5 +28,12 @@ To use tinyGFA, add the below lines to your C++ code:
 tinyGFA should build with gcc (or clang if you've got OpenMP).  
 To build, link the `.hpp` file and then build your code.
 
-### Usage
+### Index format
+The index format (gfai file) is similar to the fasta index (fai) format,
+but it includes an extra field to indicate what line type is indexed.
 
+
+### Future Developments
+1. Index rGFA paths, generating one index per static path
+2. Streaming IO of GFA lines (using callback functions)
+3. CUDA-supported data structures (but without hurting host functionality!)
