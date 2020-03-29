@@ -296,7 +296,6 @@ namespace tgfa{
     typename std::remove_reference<T>::type *addr(T &&t){
         return &t;
     }
-    const constexpr auto null_func = true ? nullptr : addr([](auto x){});
 
 
     inline bool parse_gfa_file(const char* filename,
@@ -332,8 +331,6 @@ namespace tgfa{
 
 
     }
-
-
 
 
     inline bool parse_gfa_file(std::ifstream& instream,
