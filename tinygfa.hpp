@@ -1,5 +1,7 @@
 #ifndef TGFA_H_DEF
 #define TGFA_H_DEF
+#pragma once
+
 #include <string>
 #include <sstream>
 #include <fstream>
@@ -142,10 +144,10 @@ namespace tgfa{
         }
     };
 
-    std::uint8_t EDGE_T_SINK_END_OFFSET = 1;
-    std::uint8_t EDGE_T_SINK_START_OFFSET = 2;
-    std::uint8_t EDGE_T_SOURCE_END_OFFSET = 4;
-    std::uint8_t EDGE_T_SOURCE_START_OFFSET = 8;
+    static const std::uint8_t EDGE_T_SINK_END_OFFSET = 1;
+    static const std::uint8_t EDGE_T_SINK_START_OFFSET = 2;
+    static const std::uint8_t EDGE_T_SOURCE_END_OFFSET = 4;
+    static const std::uint8_t EDGE_T_SOURCE_START_OFFSET = 8;
     struct edge_elem{
         char* edge_id = nullptr;
         char* source_id = nullptr;
@@ -220,14 +222,15 @@ namespace tgfa{
                     throw 20;
                 }
                 else if (line_type == LINK_LINE){
-                    source_id = tokens[1];
+                    pliib::strcopy(tokens[1], source_id);
                     source_orientation_forward = *tokens[2] == '+';
-                    sink_id = tokens[3];
+                    pliib::strcopy(tokens[3], sink_id);
                     sink_orientation_forward = *tokens[4] == '+';
                     set_end_begin(ends, EDGE_T_SOURCE_START_OFFSET);
                     set_end_begin(ends, EDGE_T_SOURCE_END_OFFSET);
                     set_end_begin(ends, EDGE_T_SINK_START_OFFSET);
                     set_end_begin(ends, EDGE_T_SINK_END_OFFSET);
+                    pliib::strcopy(tokens[5], alignment);
                 }
                 else{
                     std::cerr << "Invalid line type " << tokens[0] << std::endl;
