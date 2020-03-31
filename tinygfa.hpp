@@ -246,8 +246,9 @@ namespace tgfa{
     struct group_elem{
         char* group_id = nullptr;
         bool ordered = true;
-        std::uint64_t segment_count;
+        std::uint64_t segment_count = 0;
         char** segment_ids = nullptr;
+        bool* segment_orientations = nullptr;
         std::vector<opt_elem> tags;
 
         group_elem(char**& tokens, std::size_t& token_count, std::size_t*& token_sizes){
@@ -267,6 +268,18 @@ namespace tgfa{
         ~group_elem(){
             //delete [] group_id;
             //delete [] segment_ids;
+        }
+        char* segment_name(const std::uint64_t& index){
+            if (index > segment_count){
+                std::cerr << "Error: segment index " << index << " out of bounds. Max segment id: " << segment_count << std::endl;
+            }
+            return segment_ids[index];
+        }
+        bool segment_orientation(const std::uint64_t& index){
+            if (index > segment_count){
+                std::cerr << "Error: segment index " << index << " out of bounds. Max segment id: " << segment_count << std::endl;
+            }
+            return segment_orientations[index];
         }
     };
 
@@ -334,7 +347,19 @@ namespace tgfa{
 
 
     }
-
+    
+    inline void parse_gfa_file(std::istream& instream,
+            std::function<void(sequence_elem&)> seqfunc,
+            std::function<void(edge_elem&)> edge_func,
+            std::function<void(group_elem&)> group_func,
+            double spec = 1.0){
+        
+         if (!instream.good()){
+                std::cerr << "Error: input stream failure." << std::endl;
+                exit(9);
+            }
+        parse_gfa_file(static_cast<ifstream&>(instream), seqfunc, edge_func, group_func,1);
+    }
 
 
 

@@ -48,7 +48,7 @@ namespace TINYGFAIDX{
 
     enum LINETYPES {SEQUENCE = 0, EDGE = 1, PATH = 3, GAP = 4, FRAGMENT = 5, HEADER = 6, UNORDERED_GROUP = 7, ORDERED_GROUP = 8};
     const static char LINEPREFIX [8] = { 's', 'e', 'p', 'g', 'f', 'h', 'u', 'o'};
-    const static unordered_map<char, int> lineTypeToInt= {
+    const static std::unordered_map<char, int> lineTypeToInt= {
         std::make_pair('S',  SEQUENCE),
         std::make_pair('E', EDGE),
         std::make_pair('G', GAP),
@@ -74,8 +74,8 @@ struct tiny_gfaidx_base_entry_t{
     int type = 0;
     char* iden = NULL;
     int iden_len = 0;
-    int64_t offset = -1;
-    int32_t line_char_len = -1;
+    std::int64_t offset = -1;
+    std::int32_t line_char_len = -1;
 
     tiny_gfaidx_base_entry_t(){
         type = 0;
@@ -95,13 +95,14 @@ struct tiny_gfaidx_base_entry_t{
     };
 
     inline std::string to_string(){
-        stringstream st;
-        st << type << '\t' << iden << '\t' << offset << '\t' << line_char_len << endl;
+        std::stringstream st;
+        st << type << '\t' << iden << '\t' << offset << '\t' << line_char_len << std::endl;
         return st.str();
     };
 
-    void write_to_stream(std::ostream& os){
-        os << type << '\t' << iden << '\t' << offset << '\t' << line_char_len << endl;
+    std::ostream& write_to_stream(std::ostream& os){
+        os << type << '\t' << iden << '\t' << offset << '\t' << line_char_len << std::endl;
+        return os;
     };
 
 };
@@ -124,8 +125,8 @@ struct custom_base_entry_comparator
 struct tiny_gfaidx_t{
     std::map<char*, tiny_gfaidx_base_entry_t*, custom_char_comparator> iden_to_entry;
     FILE* gfa = NULL;
-    uint64_t edge_counter = -1;
-    uint64_t node_counter = -1;
+    std::uint64_t edge_counter = -1;
+    std::uint64_t node_counter = -1;
 
 
     void close(){
@@ -183,7 +184,7 @@ struct tiny_gfaidx_t{
         entry = iden_to_entry.at( getTypeID(iden, strlen(iden), SEQUENCE) );
     };
 
-    void write(ostream& os) const {
+    void write(std::ostream& os) const {
         std::vector<tiny_gfaidx_base_entry_t*> sorted_entries;
         for (auto x : iden_to_entry){
             sorted_entries.push_back(x.second);
@@ -206,23 +207,23 @@ struct tiny_gfaidx_t{
 
 
 inline void createGFAIDX(const char* gfaName, tiny_gfaidx_t& gfai){
-    uint64_t line_number = 0;
-    uint64_t base_seq_id = 0;
-    uint64_t base_edge_id = 0;
-    uint64_t offset = 0;
-    size_t line_length = 0;
+    std::uint64_t line_number = 0;
+    std::uint64_t base_seq_id = 0;
+    std::uint64_t base_edge_id = 0;
+    std::uint64_t offset = 0;
+    std::size_t line_length = 0;
 
     std::string line;
     std::ifstream gfaFile;
     gfaFile.open(gfaName);
 
-    std::vector<tuple<uint64_t, uint64_t, uint32_t>> edge_cache;
-    std::vector<tuple<uint64_t, uint64_t, uint32_t>> path_cache;
-    std::vector<tuple<uint64_t, uint64_t, uint32_t>> ordered_group_cache;
-    std::vector<tuple<uint64_t, uint64_t, uint32_t>> unordered_group_cache;
+    std::vector<std::tuple<std::uint64_t, std::uint64_t, std::uint32_t>> edge_cache;
+    std::vector<std::tuple<std::uint64_t, std::uint64_t, std::uint32_t>> path_cache;
+    std::vector<std::tuple<std::uint64_t, std::uint64_t, std::uint32_t>> ordered_group_cache;
+    std::vector<std::tuple<std::uint64_t, std::uint64_t, std::uint32_t>> unordered_group_cache;
 
     if (!(gfai.gfa = fopen(gfaName, "r"))){
-        cerr << "Error: couldn't open GFA file " << gfaName << endl;
+        std::cerr << "Error: couldn't open GFA file " << gfaName << std::endl;
         exit(1);
     }
    
@@ -232,7 +233,7 @@ inline void createGFAIDX(const char* gfaName, tiny_gfaidx_t& gfai){
         while(std::getline(gfaFile, line)){
             line_length = line.length();
             if (line[0] == 'S'){
-                vector<string> splits = pliib::split(line, '\t');
+                std::vector<std::string> splits = pliib::split(line, '\t');
                 entry->type = SEQUENCE;
                 entry->iden_len = splits[1].length();
                 entry->iden = new char[ entry->iden_len + 1 ];
@@ -263,7 +264,7 @@ inline void writeGFAIDX(const char* gfaName, const tiny_gfaidx_t& gfai ){
 
 inline bool checkGFAIDXFileExists(const char* fileName){
     struct stat statFileInfo;
-    string indexFileName(fileName);
+    std::string indexFileName(fileName);
     indexFileName = indexFileName + ".gfai";
     return stat(indexFileName.c_str(), &statFileInfo) == 0;
 };
@@ -284,21 +285,21 @@ inline void parseGFAIDX(const char* GFAFileName, tiny_gfaidx_t& gfaidx){
     ifi.open( (const char*) ifn);
 
     if (!(gfaidx.gfa = fopen(GFAFileName, "r"))){
-        cerr << "Error: couldn't open gfa file " << GFAFileName << endl;
+        std::cerr << "Error: couldn't open gfa file " << GFAFileName << std::endl;
     }
 
     if (ifi.is_open()){
         std::string line;
         while(std::getline(ifi, line)){
             if (line[0] == 'S'){
-                vector<string> splits = pliib::split(line.c_str(), '\t');
+                std::vector<std::string> splits = pliib::split(line.c_str(), '\t');
                 tiny_gfaidx_base_entry_t* t = new tiny_gfaidx_base_entry_t(splits);
                 gfaidx.add(t);
             }
         }
     }
     else{
-        cerr << "Couldn't open index " << GFAFileName << "." << endl;
+        std::cerr << "Couldn't open index " << GFAFileName << "." << std::endl;
     }
     
     ifi.close();
@@ -310,7 +311,7 @@ inline void getSequence( const tiny_gfaidx_t& gfai, const char* seqname, char*& 
     tiny_gfaidx_base_entry_t* entry;
     if (gfai.hasSequenceID(seqname)){
         gfai.getSequenceEntry(seqname, entry);
-        uint32_t sz = entry->line_char_len;
+        std::uint32_t sz = entry->line_char_len;
         seq = new char[sz + 1];
         fseek64(gfai.gfa, entry->offset, SEEK_SET);
         if (fread(seq, sizeof(char), sz, gfai.gfa)){
@@ -319,7 +320,7 @@ inline void getSequence( const tiny_gfaidx_t& gfai, const char* seqname, char*& 
 
     }
     else{
-        cerr << "No sequence ID " << seqname << " found." << endl;
+        std::cerr << "No sequence ID " << seqname << " found." << std::endl;
     }
 };
 

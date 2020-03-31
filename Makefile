@@ -7,10 +7,14 @@ LD_INC_FLAGS:= -I./ -I./pliib
 tgfa: tgfa.cpp tinygfa.hpp pliib/pliib.hpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_INC_FLAGS)
 
-utils: indexseq
+utils: indexseq getseq
 
 indexseq: examples/index.cpp pliib/pliib.hpp tinygfaidx.hpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_INC_FLAGS)
+
+getseq: examples/getseq.cpp pliib/pliib.hpp tinygfaidx.hpp
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_INC_FLAGS)
+
 
 debug-tgfa: tgfa.cpp tinygfa.hpp pliib/pliib.hpp
 	$(CXX) $(DEBUGFLAGS) -o $@ $^ $(LD_INC_FLAGS)
