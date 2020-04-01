@@ -61,6 +61,8 @@ int main_stats(int argc, char** argv){
             stats);
     std::cout << stats.to_string() << std::endl;
 
+    return 0;
+
 }
 
 int main_index(int argc, char** argv){

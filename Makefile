@@ -1,6 +1,6 @@
 CXX:=g++
 CXXFLAGS:= -O3 -fPIC -std=c++14 -pipe -D_FILE_OFFSET_BITS=64
-DEBUGFLAGS:= -O0 -pg -ggdb -fPIC -std=c++14 -pipe -D_FILE_OFFSET_BITS=64
+DEBUGFLAGS:= -Wall -O0 -pg -ggdb -fPIC -std=c++14 -pipe -D_FILE_OFFSET_BITS=64
 LD_INC_FLAGS:= -I./ -I./pliib
 
 

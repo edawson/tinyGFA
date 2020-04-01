@@ -358,7 +358,7 @@ namespace tgfa{
                 std::cerr << "Error: input stream failure." << std::endl;
                 exit(9);
             }
-        parse_gfa_file(static_cast<ifstream&>(instream), seqfunc, edge_func, group_func,1);
+        parse_gfa_file(static_cast<std::ifstream&>(instream), seqfunc, edge_func, group_func,1);
     }
 
 
