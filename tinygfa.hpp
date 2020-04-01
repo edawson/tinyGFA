@@ -56,7 +56,7 @@ namespace tgfa{
         }
     };
 
-    char VAL_TYPE_CHARS [7] = {'A', 'i', 'f', 'Z', 'J', 'H', 'B'};
+    static const char VAL_TYPE_CHARS [7] = {'A', 'i', 'f', 'Z', 'J', 'H', 'B'};
 
 
     enum val_types {CHAR_VAL_TYPE,
