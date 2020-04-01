@@ -9,6 +9,7 @@
 #include <vector>
 #include <cstdint>
 #include <functional>
+#include <assert.h>
 
 #include <pliib.hpp>
 
@@ -55,28 +56,116 @@ namespace tgfa{
         }
     };
 
+    char VAL_TYPE_CHARS [7] = {'A', 'i', 'f', 'Z', 'J', 'H', 'B'};
 
 
-    enum val_types {STRING_TYPE, INT_TYPE, FLOAT_TYPE};
+    enum val_types {CHAR_VAL_TYPE,
+        SIGNED_INT_VAL_TYPE,
+        SINGLE_PREC_FLOAT_VAL_TYPE,
+        STRING_VAL_TYPE,
+        JSON_VAL_TYPE,
+        BYTE_ARRAY_VAL_TYPE,
+        NUMERIC_ARRAY_VAL_TYPE,
+        NULL_VAL_TYPE,
+        CUSTOM_VAL_TYPE};
     struct opt_elem{
-        char* opt_id = nullptr;
-        std::uint8_t type;
+        char* tag = nullptr;
+        std::uint8_t type = NULL_VAL_TYPE;
         char* val = nullptr;
         void clear(){
-            if (opt_id != nullptr)
-                delete [] opt_id;
+            if (tag != nullptr)
+                delete tag;
             if (val != nullptr)
-                delete [] val;
+                delete val;
+        }
+
+        ~opt_elem(){
+            //clear();
+        }
+
+        void set(char**& splits, const std::size_t& split_count, std::size_t*& split_lens){
+            assert(split_count == 3);
+            pliib::strcopy(reinterpret_cast<const char*>(splits[0]), this->tag);
+            switch(splits[1][0]){
+                case 'A':
+                    type = CHAR_VAL_TYPE;
+                    break;
+                case 'i':
+                    type = SIGNED_INT_VAL_TYPE;
+                    break;
+                case 'f':
+                    type = SINGLE_PREC_FLOAT_VAL_TYPE;
+                    break;
+                case 'Z':
+                    type = STRING_VAL_TYPE;
+                    break;
+                case 'J':
+                    type = JSON_VAL_TYPE;
+                    break;
+                case 'H':
+                    type = BYTE_ARRAY_VAL_TYPE;
+                    break;
+                case 'B':
+                    type = NUMERIC_ARRAY_VAL_TYPE;
+                    break;
+                default:
+                    type = CUSTOM_VAL_TYPE;
+                    break;
+            };
+
+            pliib::strcopy(reinterpret_cast<const char*>(splits[2]), this->val);
+        }
+        opt_elem(){
+
+        }
+        opt_elem(char**& splits, const std::size_t& split_count, std::size_t*& split_lens){
+            set(splits, split_count, split_lens);
+        }
+        opt_elem(char*& tag_string){
+            char** splits = new char*[3];
+            std::size_t split_count = 3;
+            std::size_t* split_lens = new std::size_t[3];
+            std::size_t start = 0;
+            std::size_t end = 0;
+            while (tag_string[end] != ':'){
+                ++end;
+            }
+            pliib::strcopy(reinterpret_cast<const char*>(tag_string + start), end - start, splits[0]);
+            split_lens[0] = end - start;
+            start = end+1;
+            ++end;
+            while (tag_string[end] != ':'){
+                ++end;
+            }
+            pliib::strcopy(reinterpret_cast<const char*>(tag_string + start), end - start, splits[1]);
+            split_lens[1] = end - start;
+            start = end+1;
+            ++end;
+            while(tag_string[end] != '\n'){
+                ++end;
+            }
+            pliib::strcopy(reinterpret_cast<const char*>(tag_string + start), end - start, splits[2]);
+            split_lens[2] = end - start;
+
+            
+            set(splits, split_count, split_lens);
+            pliib::destroy_splits(splits, split_count, split_lens);
         }
         
         std::string get_id(){
-            return std::string(opt_id);
+            return std::string(tag);
         }
         std::string get_val(){
             return std::string(val);
         }
         std::uint8_t get_type(){
             return type;
+        }
+
+        std::string to_string(){
+            std::stringstream st;
+            st << tag << ":" << VAL_TYPE_CHARS[type] << ":" << val;
+            return st.str();
         }
         
     };
@@ -86,34 +175,47 @@ namespace tgfa{
         char* val = nullptr;
     };
     struct sequence_elem{
-        char* seq_id = nullptr;
+        char* id = nullptr;
         char* seq = nullptr;
         std::uint32_t seq_length;
         std::vector<opt_elem> tags;
         void clear(){
-            if (seq_id != nullptr)
-                delete [] seq_id;
+            if (id != nullptr)
+                delete [] id;
             if (seq != nullptr)
                 delete [] seq;
         }
-        void set(char**& splits, std::size_t& split_count, std::size_t*& split_lens, int spec = 2){
+        void set(char**& splits, std::size_t& split_count, std::size_t*& split_lens, double spec = 2){
             //clear();
-            seq_id = splits[1];
+            std::size_t index = 1;
+            id = splits[index];
+            ++index;
             if (spec == 2){
-                seq_length = std::stoull(splits[2]);
-                seq = splits[3];
+                seq_length = std::stoull(splits[index]);
+                ++index;
+                seq = splits[index];
+                ++index;
             }
             else if (spec == 1){
-                seq = splits[2];
+                seq = splits[index];
                 seq_length = strlen(seq);
+                ++index;
             }
-            for (std::size_t i = 3; i < split_count; ++i){
+            while(index < split_count){
+                opt_elem o(splits[index]);
+                tags.push_back(o);
+                ++index;
             }
-
-
         }
         sequence_elem(){
 
+        }
+        sequence_elem(char*& line, double spec = 2.0){
+            char** splits;
+            std::size_t split_count;
+            std::size_t* split_sizes;
+            pliib::split(line, '\t', splits, split_count, split_sizes);
+            set(splits, split_count, split_sizes, spec);
         }
         sequence_elem(char**& splits, std::size_t split_count, std::size_t*& split_lens){
             set(splits, split_count, split_lens);
@@ -122,12 +224,34 @@ namespace tgfa{
            // clear();
         }
 
-        inline std::ostream& output(std::ostream& os, int spec = 2){
+        std::size_t num_tags(){
+            return tags.size();
+        }
+
+        opt_elem get_tag(const char* tag){
+            for (auto o : tags){
+                if (std::strcmp(tag, o.get_id().c_str()) == 0){
+                    return o;
+                }
+            }
+            std::cerr << "ERROR: invalid tag name: " << tag << "." << std::endl;
+            std::cerr << "Valid tags are: ";
+            for (auto o : tags){
+                std::cerr << o.get_id() << std::endl;
+            }
+            throw 20;
+        }
+
+        opt_elem get_tag(std::string tag){
+            return get_tag(tag.c_str());
+        }
+
+        inline std::ostream& output(std::ostream& os, double spec = 2){
             if (spec == 2){
-                os << 'S' << '\t' << seq_id << '\t' << seq_length << '\t' << seq << '\t';
+                os << 'S' << '\t' << id << '\t' << seq_length << '\t' << seq << '\t';
             }
             else if (spec == 1){
-                os << 'S' << '\t' << seq_id  << '\t' << seq << '\t';
+                os << 'S' << '\t' << id  << '\t' << seq << '\t';
 
             }
             else {
@@ -137,7 +261,7 @@ namespace tgfa{
             return os;
         }
 
-        inline std::string to_string(int spec = 2){
+        inline std::string to_string(double spec = 2){
             std::stringstream st;
             output(st, spec);
             return st.str();
@@ -333,7 +457,7 @@ namespace tgfa{
             auto& group_func,
             bool process_groups,
             gfa_stat_t& stats,
-            int spec = 2){
+            double spec = 2){
 
         std::ifstream instream;
         instream.open(filename, std::ifstream::in);
@@ -368,7 +492,7 @@ namespace tgfa{
             auto& edge_func,
             auto& group_func,
             gfa_stat_t& stats,
-            int spec){
+            double spec = 2.0){
             return parse_gfa_file(instream, seq_func, true, edge_func, true, group_func, true, stats, spec);
     }
     inline bool parse_gfa_file(std::ifstream& instream,
@@ -379,7 +503,7 @@ namespace tgfa{
             auto& group_func,
             bool process_groups,
             gfa_stat_t& stats,
-            int spec){
+            double spec = 2.0){
 
             bool ret = true;
 

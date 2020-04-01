@@ -19,10 +19,18 @@ getseq: examples/getseq.cpp pliib/pliib.hpp tinygfaidx.hpp
 debug-tgfa: tgfa.cpp tinygfa.hpp pliib/pliib.hpp
 	$(CXX) $(DEBUGFLAGS) -o $@ $^ $(LD_INC_FLAGS)
 
+
+test: test_tinygfa.cpp tinygfa.hpp pliib/pliib.hpp pliib/catch.hpp
+	$(CXX) $(DEBUGFLAGS) -o $@ $< $(LD_INC_FLAGS) && ./test
+
+check: test
+	./test
+
 clean:
 	$(RM) getseq
 	$(RM) indexseq
 	$(RM) tgfa
 	$(RM) debug-tgfa
+	$(RM) test
 
 .PHONY: utils clean
