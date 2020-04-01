@@ -268,10 +268,10 @@ namespace tgfa{
         }
     };
 
-    static const std::uint8_t EDGE_T_SINK_END_OFFSET = 1;
-    static const std::uint8_t EDGE_T_SINK_START_OFFSET = 2;
-    static const std::uint8_t EDGE_T_SOURCE_END_OFFSET = 4;
-    static const std::uint8_t EDGE_T_SOURCE_START_OFFSET = 8;
+    static const std::uint8_t EDGE_T_SINK_END_OFFSET = 0x1;
+    static const std::uint8_t EDGE_T_SINK_START_OFFSET = 0x2;
+    static const std::uint8_t EDGE_T_SOURCE_END_OFFSET = 0x3;
+    static const std::uint8_t EDGE_T_SOURCE_START_OFFSET = 0x4;
     struct edge_elem{
         char* edge_id = nullptr;
         char* source_id = nullptr;
@@ -280,7 +280,7 @@ namespace tgfa{
         bool sink_orientation_forward;
         std::pair<uint32_t, uint32_t> source_pos;
         std::pair<uint32_t, uint32_t> sink_pos;
-        std::uint8_t ends;
+        std::uint8_t ends = 0x0;
         char* alignment = nullptr;
         std::vector<opt_elem> tags;
 
@@ -292,24 +292,32 @@ namespace tgfa{
         edge_elem(char**& tokens, std::size_t& token_count, std::size_t*& token_sizes){
             set(tokens, token_count, token_sizes);
         }
+
+        edge_elem(char*& line){
+            char** splits;
+            std::size_t split_count;
+            std::size_t* split_lengths;
+            pliib::split(line, '\t', splits, split_count, split_lengths);
+            set(splits, split_count, split_lengths);
+        }
+
         bool sink_end(){
-            
-            return true;
+            return ends & EDGE_T_SINK_END_OFFSET;
         };
         bool sink_begin(){
-            return true;
+            return ends & EDGE_T_SINK_START_OFFSET;
         };
         bool source_end(){
-            return true;
+            return ends & EDGE_T_SOURCE_END_OFFSET;
         };
         bool source_begin(){
-            return true;
+            return ends & EDGE_T_SOURCE_START_OFFSET;
         };
         void set_end_begin(std::uint8_t& ends, std::uint8_t offset){
-            ends |= 1<<offset;
+            ends |= offset;
         }
         void unset_end_begin(std::uint8_t& ends, std::uint8_t offset){
-            ends &= ~(1<<offset);
+            ends &= ~(offset);
         }
         void set(char**& tokens, std::size_t& token_count, std::size_t*& token_sizes){
             if (token_count > 0){
@@ -334,7 +342,7 @@ namespace tgfa{
 
                     alignment = tokens[8];
                     for (std::size_t i = 9; i < token_count; ++i){
-                        opt_elem o;
+                        opt_elem o(tokens[i]);
                         tags.push_back(o);
                     }
 
@@ -355,6 +363,10 @@ namespace tgfa{
                     set_end_begin(ends, EDGE_T_SINK_START_OFFSET);
                     set_end_begin(ends, EDGE_T_SINK_END_OFFSET);
                     pliib::strcopy(tokens[5], alignment);
+                    for (std::size_t i = 6; i < token_count; ++i){
+                        opt_elem o(tokens[i]);
+                        tags.push_back(o);
+                    }
                 }
                 else{
                     std::cerr << "Invalid line type " << tokens[0] << std::endl;
@@ -362,36 +374,79 @@ namespace tgfa{
                 }
             }
         }
+
         void clear(){
             delete [] source_id;
             delete [] sink_id;
         }
+
+                std::size_t num_tags(){
+            return tags.size();
+        }
+
+        opt_elem get_tag(const char* tag){
+            for (auto o : tags){
+                if (std::strcmp(tag, o.get_id().c_str()) == 0){
+                    return o;
+                }
+            }
+            std::cerr << "ERROR: invalid tag name: " << tag << "." << std::endl;
+            std::cerr << "Valid tags are: ";
+            for (auto o : tags){
+                std::cerr << o.get_id() << std::endl;
+            }
+            throw 20;
+        }
+
+        opt_elem get_tag(std::string tag){
+            return get_tag(tag.c_str());
+        }
     };
     struct group_elem{
-        char* group_id = nullptr;
+        char* id = nullptr;
         bool ordered = true;
         std::uint64_t segment_count = 0;
         char** segment_ids = nullptr;
         bool* segment_orientations = nullptr;
+        char** overlaps = nullptr;
+        std::size_t overlap_count = 0;
+        std::size_t* overlap_lengths = nullptr;
         std::vector<opt_elem> tags;
 
         group_elem(char**& tokens, std::size_t& token_count, std::size_t*& token_sizes){
             set(tokens, token_count, token_sizes);
         }
         void set(char**& tokens, std::size_t& token_count, std::size_t*& token_sizes){
-            group_id = tokens[1];
+            id = tokens[1];
             std::size_t num_seg_splits;
             std::size_t* seg_split_lens;
             pliib::split(tokens[2], ',', segment_ids, num_seg_splits, seg_split_lens);
+            segment_orientations = new bool [num_seg_splits];
             for (std::size_t i = 0; i < num_seg_splits; ++i){
+                segment_orientations[i] = segment_ids[i][seg_split_lens[i] - 1] == '+';
                 pliib::slice(segment_ids[i], 0, seg_split_lens[i] - 1, segment_ids[i]);
             }
-            ordered = tokens[0][0] == 'O';
+            ordered = tokens[0][0] == 'O' || tokens[0][0] == 'P';
             segment_count = num_seg_splits;
+
+            if (token_count > 3){
+                if (tokens[3][0] != '*'){
+                    pliib::split(tokens[3], ',', overlaps, overlap_count, overlap_lengths);
+                }
+            }
+            
+
+        }
+        group_elem(char*& line){
+            char** splits;
+            std::size_t split_count;
+            std::size_t* split_lengths;
+            pliib::split(line, '\t', splits, split_count, split_lengths);
+            set(splits, split_count, split_lengths);
         }
         ~group_elem(){
-            //delete [] group_id;
-            //delete [] segment_ids;
+            //delete group_id;
+            //delete segment_ids;
         }
         char* segment_name(const std::uint64_t& index){
             if (index > segment_count){
@@ -404,6 +459,17 @@ namespace tgfa{
                 std::cerr << "Error: segment index " << index << " out of bounds. Max segment id: " << segment_count << std::endl;
             }
             return segment_orientations[index];
+        }
+
+        std::string overlap_tail(std::size_t index){
+            assert(index < overlap_count);
+            assert(overlap_count > 0);
+            return std::string(overlaps[index]);
+        }
+        std::string overlap_head(std::size_t index){
+            assert(index > 0);
+            assert(overlap_count > 0);
+            return std::string(overlaps[index - 1]);
         }
     };
 
@@ -542,7 +608,7 @@ namespace tgfa{
                     }
                     ++stats.edge_count;
                 }
-                else if (line_type == GROUP_LINE){
+                else if (line_type == GROUP_LINE || line_type == PATH_LINE){
                     if (process_groups){
                         pliib::split(line, '\t', splits, split_count, split_lens);
                         group_elem g(splits, split_count, split_lens);
