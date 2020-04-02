@@ -126,6 +126,10 @@ TEST_CASE("GFA 2.0 unordered groups are parsed correctly", "[group_elem]"){
 
 }
 
+TEST_CASE("GFA 0.1 paths, which are needed for vg input, are parsed corrctly", "[group_elem]"){
+
+}
+
 
 
 
