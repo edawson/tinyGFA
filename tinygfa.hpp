@@ -196,7 +196,7 @@ namespace tgfa{
                 seq = splits[index];
                 ++index;
             }
-            else if (spec == 1){
+            else if (spec <= 1){
                 seq = splits[index];
                 seq_length = strlen(seq);
                 ++index;
