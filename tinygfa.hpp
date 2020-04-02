@@ -147,11 +147,11 @@ namespace tgfa{
             pliib::strcopy(reinterpret_cast<const char*>(tag_string + start), end - start, splits[2]);
             split_lens[2] = end - start;
 
-            
+
             set(splits, split_count, split_lens);
             pliib::destroy_splits(splits, split_count, split_lens);
         }
-        
+
         std::string get_id(){
             return std::string(tag);
         }
@@ -167,7 +167,7 @@ namespace tgfa{
             st << tag << ":" << VAL_TYPE_CHARS[type] << ":" << val;
             return st.str();
         }
-        
+
     };
     struct header_elem{
         char* key = nullptr;
@@ -221,7 +221,7 @@ namespace tgfa{
             set(splits, split_count, split_lens);
         }
         ~sequence_elem(){
-           // clear();
+            // clear();
         }
 
         std::size_t num_tags(){
@@ -346,7 +346,7 @@ namespace tgfa{
                         tags.push_back(o);
                     }
 
-                    
+
 
                 }
                 else if(line_type == CONTAINED_LINE){
@@ -380,7 +380,7 @@ namespace tgfa{
             delete [] sink_id;
         }
 
-                std::size_t num_tags(){
+        std::size_t num_tags(){
             return tags.size();
         }
 
@@ -434,7 +434,7 @@ namespace tgfa{
                     pliib::split(tokens[3], ',', overlaps, overlap_count, overlap_lengths);
                 }
             }
-            
+
 
         }
         group_elem(char*& line){
@@ -480,41 +480,94 @@ namespace tgfa{
     };
 
     struct gfa_stat_t{
-            std::uint64_t sequence_count = 0;
-            std::uint64_t edge_count = 0;
-            std::uint64_t group_count = 0;
-            std::uint64_t path_count = 0;
-            double N50 = 0.0;
-            double N90 = 0.0;
-            std::string to_string(){
-                std::stringstream st;
-                st << "Number of sequences (nodes): " << sequence_count << std::endl <<
-                    "Number of edges: " << edge_count << std::endl <<
-                    "Number of groups: " << group_count << std::endl <<
-                    "Number of paths (ordered groups): " << path_count;
-                return st.str();
-            }
+        std::uint64_t sequence_count = 0;
+        std::uint64_t edge_count = 0;
+        std::uint64_t group_count = 0;
+        std::uint64_t path_count = 0;
+        double N50 = 0.0;
+        double N90 = 0.0;
+        std::string to_string(){
+            std::stringstream st;
+            st << "Number of sequences (nodes): " << sequence_count << std::endl <<
+                "Number of edges: " << edge_count << std::endl <<
+                "Number of groups: " << group_count << std::endl <<
+                "Number of paths (ordered groups): " << path_count;
+            return st.str();
+        }
     };
 
     // Cheers to pfultz2.com/blog, 2014 09 02
     template<typename T>
-    typename std::remove_reference<T>::type *addr(T &&t){
-        return &t;
-    }
+        typename std::remove_reference<T>::type *addr(T &&t){
+            return &t;
+        }
     const constexpr auto null_func = true ? nullptr : addr([](auto x){});
 
-
-    inline bool parse_gfa_file(const char* filename,
+    inline bool parse_gfa_file(std::ifstream& instream,
             auto& seq_func,
+            bool process_seqs,
             auto& edge_func,
+            bool process_edges,
             auto& group_func,
+            bool process_groups,
             gfa_stat_t& stats,
-            int spec = 2){
+            double spec = 2.0){
 
-        return parse_gfa_file(filename, seq_func, true, edge_func, true, group_func, true, stats, spec);
-        
+        bool ret = true;
+
+        if (!instream.good()){
+            std::cerr << "Error: input stream failure." << std::endl;
+            throw(9);
+        }
+
+        std::streamsize max_ln_size = 250000;
+        char* line = new char[max_ln_size];
+        char** splits;
+        std::size_t split_count;
+        std::size_t* split_lens;
+
+        sequence_elem s;
+        edge_elem e;
+        //group_elem g;
+        while(instream.getline(line, max_ln_size)){
+            auto line_type = determine_line_type(line);
+            if (line_type == SEQUENCE_LINE){
+                if (process_seqs){
+                    pliib::split(line, '\t', splits, split_count, split_lens);
+                    s.set(splits, split_count, split_lens, spec);
+                    seq_func(s);
+                    pliib::destroy_splits(splits, split_count, split_lens);
+                    ++stats.sequence_count;
+                }
+            }
+            else if (line_type == EDGE_LINE || line_type == LINK_LINE || line_type == CONTAINED_LINE){
+                if (process_edges){
+                    pliib::split(line, '\t', splits, split_count, split_lens);
+                    e.set(splits, split_count, split_lens);
+                    edge_func(e);
+                    e.clear();
+                    pliib::destroy_splits(splits, split_count, split_lens);
+                }
+                ++stats.edge_count;
+            }
+            else if (line_type == GROUP_LINE || line_type == PATH_LINE){
+                if (process_groups){
+                    pliib::split(line, '\t', splits, split_count, split_lens);
+                    group_elem g(splits, split_count, split_lens);
+                    group_func(g);
+                    pliib::destroy_splits(splits, split_count, split_lens);
+                    ++stats.group_count;
+                    if (g.ordered){
+                        ++stats.path_count;
+                    }
+                }
+            }
+        }
+        delete [] line;
+
+        return ret;
     }
-
+    
     inline bool parse_gfa_file(const char* filename,
             auto& seq_func,
             bool process_seqs,
@@ -528,102 +581,36 @@ namespace tgfa{
         std::ifstream instream;
         instream.open(filename, std::ifstream::in);
 
-        if (!instream.good()){
-            std::cerr << "Error: file " << filename << " could not be properly opened." << std::endl;
-            exit(9);
-        }
-
         return parse_gfa_file(instream, seq_func, process_seqs, edge_func, process_edges, group_func, process_groups, stats, spec);
+    }
+    inline bool parse_gfa_file(const char* filename,
+            auto& seq_func,
+            auto& edge_func,
+            auto& group_func,
+            gfa_stat_t& stats,
+            double spec = 2.0){
 
+        return parse_gfa_file(filename, seq_func, true, edge_func, true, group_func, true, stats, spec);
 
     }
-    
+    inline bool parse_gfa_file(std::ifstream& instream,
+            auto& seq_func,
+            auto& edge_func,
+            auto& group_func,
+            gfa_stat_t& stats,
+            double spec = 2.0){
+        return parse_gfa_file(instream, seq_func, true, edge_func, true, group_func, true, stats, spec);
+    }
     inline void parse_gfa_file(std::istream& instream,
-            std::function<void(sequence_elem&)> seqfunc,
-            std::function<void(edge_elem&)> edge_func,
-            std::function<void(group_elem&)> group_func,
+            std::function<void(sequence_elem&)>& seqfunc,
+            std::function<void(edge_elem&)>& edge_func,
+            std::function<void(group_elem&)>& group_func,
             double spec = 1.0){
-        
-         if (!instream.good()){
-                std::cerr << "Error: input stream failure." << std::endl;
-                throw(9);
-            }
-        parse_gfa_file(reinterpret_cast<std::ifstream&>(instream), seqfunc, edge_func, group_func,1);
+
+        gfa_stat_t stats;
+        parse_gfa_file(reinterpret_cast<std::ifstream&>(instream), seqfunc, edge_func, group_func, stats, spec);
     }
 
 
-
-    inline bool parse_gfa_file(std::ifstream& instream,
-            auto& seq_func,
-            auto& edge_func,
-            auto& group_func,
-            gfa_stat_t& stats,
-            double spec = 2.0){
-            return parse_gfa_file(instream, seq_func, true, edge_func, true, group_func, true, stats, spec);
-    }
-    inline bool parse_gfa_file(std::ifstream& instream,
-            auto& seq_func,
-            bool process_seqs,
-            auto& edge_func,
-            bool process_edges,
-            auto& group_func,
-            bool process_groups,
-            gfa_stat_t& stats,
-            double spec = 2.0){
-
-            bool ret = true;
-
-            if (!instream.good()){
-                std::cerr << "Error: input stream failure." << std::endl;
-                exit(9);
-            }
-
-            std::streamsize max_ln_size = 250000;
-            char* line = new char[max_ln_size];
-            char** splits;
-            std::size_t split_count;
-            std::size_t* split_lens;
-
-            sequence_elem s;
-            edge_elem e;
-            //group_elem g;
-            while(instream.getline(line, max_ln_size)){
-                auto line_type = determine_line_type(line);
-                if (line_type == SEQUENCE_LINE){
-                    if (process_seqs){
-                        pliib::split(line, '\t', splits, split_count, split_lens);
-                        s.set(splits, split_count, split_lens, spec);
-                        seq_func(s);
-                        pliib::destroy_splits(splits, split_count, split_lens);
-                        ++stats.sequence_count;
-                    }
-                }
-                else if (line_type == EDGE_LINE || line_type == LINK_LINE || line_type == CONTAINED_LINE){
-                    if (process_edges){
-                        pliib::split(line, '\t', splits, split_count, split_lens);
-                        e.set(splits, split_count, split_lens);
-                        edge_func(e);
-                        e.clear();
-                        pliib::destroy_splits(splits, split_count, split_lens);
-                    }
-                    ++stats.edge_count;
-                }
-                else if (line_type == GROUP_LINE || line_type == PATH_LINE){
-                    if (process_groups){
-                        pliib::split(line, '\t', splits, split_count, split_lens);
-                        group_elem g(splits, split_count, split_lens);
-                        group_func(g);
-                        pliib::destroy_splits(splits, split_count, split_lens);
-                        ++stats.group_count;
-                        if (g.ordered){
-                            ++stats.path_count;
-                        }
-                    }
-                }
-            }
-            delete [] line;
-
-            return ret;
-    }
 }
 #endif
