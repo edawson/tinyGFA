@@ -4,8 +4,8 @@
 
 #include <string>
 #include <sstream>
-#include <fstream>
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <cstdint>
 #include <functional>
@@ -17,7 +17,7 @@
 namespace tgfa{
 
     static double GLOBAL_GFA_VERSION = 0.0;
-
+    
     enum GFA_LINE_TYPES {HEADER_LINE,SEQUENCE_LINE,FRAGMENT_LINE,EDGE_LINE,GAP_LINE,GROUP_LINE,PATH_LINE,LINK_LINE,CONTAINED_LINE,WALK_LINE};
 
     static inline int determine_line_type(const char* line){
@@ -503,7 +503,19 @@ namespace tgfa{
         }
     const constexpr auto null_func = true ? nullptr : addr([](auto x){});
 
-    inline bool parse_gfa_file(std::ifstream& instream,
+    inline gfa_stat_t parse_gfa(std::istream& istream,
+            auto& header_func,
+            auto& seq_func,
+            auto& edge_func,
+            auto& group_func,
+            double spec = 2.0){
+        gfa_stat_t stats;
+
+        return stats;
+    }
+
+
+    inline bool parse_gfa_file(std::istream& instream,
             auto& seq_func,
             bool process_seqs,
             auto& edge_func,
@@ -515,10 +527,9 @@ namespace tgfa{
 
         bool ret = true;
 
-        if (!instream.good()){
-            std::cerr << "Error: input stream failure." << std::endl;
-            throw(9);
-        }
+        //if (!instream.good()){
+        //    throw std::runtime_error("Error: input stream was not good [tinygfa].");
+        //}
 
         std::streamsize max_ln_size = 250000;
         char* line = new char[max_ln_size];
@@ -593,7 +604,7 @@ namespace tgfa{
         return parse_gfa_file(filename, seq_func, true, edge_func, true, group_func, true, stats, spec);
 
     }
-    inline bool parse_gfa_file(std::ifstream& instream,
+    inline bool parse_gfa_file(std::istream& instream,
             auto& seq_func,
             auto& edge_func,
             auto& group_func,
@@ -608,7 +619,7 @@ namespace tgfa{
             double spec = 1.0){
 
         gfa_stat_t stats;
-        parse_gfa_file(reinterpret_cast<std::ifstream&>(instream), seqfunc, edge_func, group_func, stats, spec);
+        parse_gfa_file(instream, seqfunc, edge_func, group_func, stats, spec);
     }
 
 
