@@ -16,7 +16,7 @@
 
 namespace tgfa{
 
-
+    static double GLOBAL_GFA_VERSION = 0.0;
 
     enum GFA_LINE_TYPES {HEADER_LINE,SEQUENCE_LINE,FRAGMENT_LINE,EDGE_LINE,GAP_LINE,GROUP_LINE,PATH_LINE,LINK_LINE,CONTAINED_LINE,WALK_LINE};
 
@@ -546,9 +546,9 @@ namespace tgfa{
         
          if (!instream.good()){
                 std::cerr << "Error: input stream failure." << std::endl;
-                exit(9);
+                throw(9);
             }
-        parse_gfa_file(static_cast<std::ifstream&>(instream), seqfunc, edge_func, group_func,1);
+        parse_gfa_file(reinterpret_cast<std::ifstream&>(instream), seqfunc, edge_func, group_func,1);
     }
 
 
