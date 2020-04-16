@@ -51,7 +51,8 @@ int main_stats(int argc, char** argv){
 
     tgfa::gfa_stat_t stats;
 
-    auto s_func = [&](tgfa::sequence_elem s){std::cout << "S:" << s.seq_id << ":" << s.seq_length << std::endl;};
+    //auto s_func = [&](tgfa::sequence_elem s){std::cout << "S:" << s.seq_id << ":" << s.seq_length << std::endl;};I
+    auto s_func = [](tgfa::sequence_elem s){};
     auto e_func = [](tgfa::edge_elem e){};
     auto g_func = [](tgfa::group_elem g){};
 
@@ -186,8 +187,17 @@ int main(int argc, char** argv){
     else if (strcmp(argv[1], "index") == 0){
         return main_index(argc, argv);
     }
+    else if (strcmp(argv[1], "sort") == 0){
+
+    }
+    else if (strcmp(argv[1], "ids") == 0){
+
+    }
     else if (strcmp(argv[1], "gaf_stats") == 0){
         return main_gaf_stats(argc, argv);
+    }
+    else if (strcmp(argv[1], "gaf_index") == 0){
+
     }
     else{
         std::cerr << "Invalid subcommand [" << argv[1] << "]. Please choose a valid subcommand" << std::endl;
