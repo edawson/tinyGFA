@@ -34,8 +34,13 @@ To build, link the `.hpp` file and then build your code.
 The index format (gfai file) is similar to the fasta index (fai) format,
 but it includes an extra field to indicate what line type is indexed.
 
+```
+<LINE TYPE> <ID> <START OFFSET> <LINE LENGTH>
+```
+
 
 ### Future Developments
 1. Index rGFA paths, generating one index per static path
 2. Streaming IO of GFA lines (using callback functions)
 3. CUDA-supported data structures (but without hurting host functionality!)
+4. Index-backed sorting of lines / files

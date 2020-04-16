@@ -2,6 +2,7 @@
 #include <string>
 #include <getopt.h>
 #include "tinygfa.hpp"
+#include "tinygaf.hpp"
 
 
 int main_stats(int argc, char** argv){
@@ -50,7 +51,8 @@ int main_stats(int argc, char** argv){
 
     tgfa::gfa_stat_t stats;
 
-    auto s_func = [&](tgfa::sequence_elem s){std::cout << "S:" << s.seq_id << ":" << s.seq_length << std::endl;};
+    //auto s_func = [&](tgfa::sequence_elem s){std::cout << "S:" << s.seq_id << ":" << s.seq_length << std::endl;};I
+    auto s_func = [](tgfa::sequence_elem s){};
     auto e_func = [](tgfa::edge_elem e){};
     auto g_func = [](tgfa::group_elem g){};
 
@@ -124,6 +126,54 @@ int main_index(int argc, char** argv){
     return 0;
 }
 
+int main_gaf_stats(int argc, char** argv){
+    std::string gfile;
+    double spec = 0.1;
+
+    if (argc <= 2){
+        std::cerr << "Please provide a G[A]F (NOT GF[A]) file." << std::endl;
+        return -1;
+    }
+
+    optind = 2;
+    int c;
+    while (true){
+        static struct option long_options[] =
+        {
+            {"help", no_argument, 0, 'h'},
+            {"length", no_argument, 0, 'l'},
+            {"all", no_argument, 0, 'a'},
+            {"version", no_argument, 0, 'v'},
+            {"spec", required_argument, 0, 's'},
+            {0,0,0,0}
+        };
+    
+        int option_index = 0;
+        c = getopt_long(argc, argv, "hlavs:", long_options, &option_index);
+        if (c == -1){
+            break;
+        }
+
+        switch (c){
+
+            case '?':
+            case 'h':
+                // nodes, edges, all stats, edges, paths
+                exit(0);
+            default:
+                abort();
+        }
+    }
+
+    gfile = argv[optind];
+
+
+    auto gfunc = [&](tgfa::gaf_elem g){};
+    tgfa::gaf_stats stats;
+    tgfa::parse_gaf_file(gfile.c_str(), gfunc, stats, spec);
+    return 0;
+}
+
 
 int main(int argc, char** argv){
     if (argc < 2){
@@ -136,6 +186,18 @@ int main(int argc, char** argv){
     }
     else if (strcmp(argv[1], "index") == 0){
         return main_index(argc, argv);
+    }
+    else if (strcmp(argv[1], "sort") == 0){
+
+    }
+    else if (strcmp(argv[1], "ids") == 0){
+
+    }
+    else if (strcmp(argv[1], "gaf_stats") == 0){
+        return main_gaf_stats(argc, argv);
+    }
+    else if (strcmp(argv[1], "gaf_index") == 0){
+
     }
     else{
         std::cerr << "Invalid subcommand [" << argv[1] << "]. Please choose a valid subcommand" << std::endl;
