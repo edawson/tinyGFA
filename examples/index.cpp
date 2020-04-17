@@ -14,8 +14,8 @@ int main(int argc, char** argv){
     }
 
     tiny_gfaidx_t tf;
-    createGFAIDX(argv[1], tf);
-    writeGFAIDX(argv[1], tf);
+    create_gfa_index(argv[1], tf);
+    write_gfa_index(argv[1], tf);
 
     return 0;
 }

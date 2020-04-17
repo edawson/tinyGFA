@@ -11,14 +11,23 @@
 #include <functional>
 #include <assert.h>
 
-#include <pliib.hpp>
+#include "pliib.hpp"
 
 
 namespace tgfa{
 
     static double GLOBAL_GFA_VERSION = 0.0;
     
-    enum GFA_LINE_TYPES {HEADER_LINE,SEQUENCE_LINE,FRAGMENT_LINE,EDGE_LINE,GAP_LINE,GROUP_LINE,PATH_LINE,LINK_LINE,CONTAINED_LINE,WALK_LINE};
+    enum GFA_LINE_TYPES {HEADER_LINE,
+        SEQUENCE_LINE,
+        FRAGMENT_LINE,
+        EDGE_LINE,
+        GAP_LINE,
+        GROUP_LINE,
+        PATH_LINE,
+        LINK_LINE,
+        CONTAINED_LINE,
+        WALK_LINE};
 
     static inline int determine_line_type(const char* line){
         if (line[0] == 'H'){

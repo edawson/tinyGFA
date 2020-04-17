@@ -21,7 +21,6 @@ typedef __off64_t off_type;
 #endif
 
 
-
 #include <string>
 #include <sstream>
 #include <ostream>
@@ -34,6 +33,7 @@ typedef __off64_t off_type;
 #include <algorithm>
 #include <sys/stat.h>
 #include "pliib.hpp"
+#include "tinygfa.hpp"
 
 
 
@@ -45,285 +45,329 @@ typedef __off64_t off_type;
  */
 
 namespace TINYGFAIDX{
+    
+    double GLOBAL_TGFI_SPEC = 2.0;
 
-    enum LINETYPES {SEQUENCE = 0, EDGE = 1, PATH = 3, GAP = 4, FRAGMENT = 5, HEADER = 6, UNORDERED_GROUP = 7, ORDERED_GROUP = 8};
-    const static char LINEPREFIX [8] = { 's', 'e', 'p', 'g', 'f', 'h', 'u', 'o'};
-    const static std::unordered_map<char, int> lineTypeToInt= {
-        std::make_pair('S',  SEQUENCE),
-        std::make_pair('E', EDGE),
-        std::make_pair('G', GAP),
-        std::make_pair('P', PATH),
-        std::make_pair('F', FRAGMENT),
-        std::make_pair('H', HEADER),
-        std::make_pair('U', UNORDERED_GROUP),
-        std::make_pair('O', ORDERED_GROUP)
-    };
     // From https://stackoverflow.com/questions/4157687/using-char-as-a-key-in-stdmap
-struct custom_char_comparator
-{
-   bool operator()(char const *a, char const *b) const
-   {
-      return std::strcmp(a, b) < 0;
-   }
-};
-/**
- * Base line type. Defines a sufficient amount of information
- * to build a stable index.
- */
-struct tiny_gfaidx_base_entry_t{
-    int type = 0;
-    char* iden = NULL;
-    int iden_len = 0;
-    std::int64_t offset = -1;
-    std::int32_t line_char_len = -1;
-
-    tiny_gfaidx_base_entry_t(){
-        type = 0;
-        iden = NULL;
-        offset = -1;
-        line_char_len = -1;
-    };
-    tiny_gfaidx_base_entry_t(std::vector<std::string> splits){
-        assert(splits.size() == 4);
-        this->type = std::stoi(splits[0]);
-        this->iden_len = splits[1].length();
-        this->iden = new char[this->iden_len + 1];
-        memcpy(this->iden, splits[1].c_str(), splits[1].length() * sizeof(char));
-        this->iden[this->iden_len] = '\0';
-        this->offset = std::stoull(splits[2]);
-        this->line_char_len = std::stoi(splits[3]);
-    };
-
-    inline std::string to_string(){
-        std::stringstream st;
-        st << type << '\t' << iden << '\t' << offset << '\t' << line_char_len << std::endl;
-        return st.str();
-    };
-
-    std::ostream& write_to_stream(std::ostream& os){
-        os << type << '\t' << iden << '\t' << offset << '\t' << line_char_len << std::endl;
-        return os;
-    };
-
-};
-
-struct custom_gfaidx_entry_t_comparator
-{
-   bool operator()(tiny_gfaidx_base_entry_t const *a, tiny_gfaidx_base_entry_t const *b) const
-   {
-      return a->offset < b->offset;
-   }
-};
-
-struct custom_base_entry_comparator
-{
-    bool operator()(tiny_gfaidx_base_entry_t const * a, tiny_gfaidx_base_entry_t const * b){
-        return std::strcmp(a->iden, b->iden) < 0;
-    }
-};
-
-struct tiny_gfaidx_t{
-    std::map<char*, tiny_gfaidx_base_entry_t*, custom_char_comparator> iden_to_entry;
-    FILE* gfa = NULL;
-    std::uint64_t edge_counter = -1;
-    std::uint64_t node_counter = -1;
-
-
-    void close(){
-        if (gfa != NULL){
-            fclose(gfa);
-        }
-        for (auto k : iden_to_entry){
-            //delete [] k.second->iden;
-            //delete k.second;
+    struct custom_char_comparator
+    {
+        bool operator()(char const *a, char const *b) const
+        {
+            return std::strcmp(a, b) < 0;
         }
     };
+    /**
+     * Base line type. Defines a sufficient amount of information
+     * to build a stable index.
+     */
+    struct tiny_gfaidx_base_entry_t{
+        char type = '\0';
+        char* iden = nullptr;
+        char* edge_source = nullptr;
+        char* edge_sink = nullptr;
+        bool from_end = true;
+        bool to_start = true;
+        int iden_len = 0;
+        std::size_t offset = -1;
+        // Length of the line (character count), excluding the NULL char
+        std::size_t line_char_len = -1;
+        std::size_t unknown_id = 0;
 
-
-    ~tiny_gfaidx_t(){
-        close();
-    };
-
-    // Strip off the first character of an identifier (its type)
-    char* getRawID( const char* iden, int len){
-        char* id = new char[len];
-        for (int i = 1; i < len; ++i){
-            id[i - 1] = iden[i];
+        tiny_gfaidx_base_entry_t(){
         }
-        id[len - 1] = '\n';
-        return id;
-    };
+        tiny_gfaidx_base_entry_t(std::string& line){
 
-    char* getTypeID(const char* iden, int len, int type) const{
-        char* id = new char(len + 1);
-        id[0] = LINEPREFIX[type];
-        for (int i = 1; i < len + 1; ++i){
-            id[i] = iden[i - 1];
         }
-        id[len + 1 - 1] = '\n';
-        return id;
-    };
-
-    void add(tiny_gfaidx_base_entry_t*& entry){
-        iden_to_entry[ getTypeID(entry->iden, entry->iden_len, entry->type)] = entry;
-    };
-
-    bool hasBaseID(const char* s) const {
-        return (iden_to_entry.count( (char*) s ) != 0);
-    };
-
-    bool hasSequenceID(const char* s) const {
-        return hasBaseID(getTypeID( (char*) s, strlen(s), SEQUENCE));   
-    };
-
-    inline void get(const char* iden, tiny_gfaidx_base_entry_t*& entry) const {
-        entry = iden_to_entry.at( (char*) iden);
-    };
-
-    void getSequenceEntry(const char* iden, tiny_gfaidx_base_entry_t*& entry) const{
-        entry = iden_to_entry.at( getTypeID(iden, strlen(iden), SEQUENCE) );
-    };
-
-    void write(std::ostream& os) const {
-        std::vector<tiny_gfaidx_base_entry_t*> sorted_entries;
-        for (auto x : iden_to_entry){
-            sorted_entries.push_back(x.second);
-        }
-        std::sort(sorted_entries.begin(), sorted_entries.end(), custom_gfaidx_entry_t_comparator());
-        for (auto x : sorted_entries){
-            x->write_to_stream(os);
-        }
-    };
-
-    void write(const char* filename) const{
-        std::ofstream ofi;
-        ofi.open(filename);
-        if (ofi.good()){
-            write(ofi);
-        }
-    };
-
-} ;
-
-
-inline void createGFAIDX(const char* gfaName, tiny_gfaidx_t& gfai){
-    std::uint64_t line_number = 0;
-    std::uint64_t base_seq_id = 0;
-    std::uint64_t base_edge_id = 0;
-    std::uint64_t offset = 0;
-    std::size_t line_length = 0;
-
-    std::string line;
-    std::ifstream gfaFile;
-    gfaFile.open(gfaName);
-
-    std::vector<std::tuple<std::uint64_t, std::uint64_t, std::uint32_t>> edge_cache;
-    std::vector<std::tuple<std::uint64_t, std::uint64_t, std::uint32_t>> path_cache;
-    std::vector<std::tuple<std::uint64_t, std::uint64_t, std::uint32_t>> ordered_group_cache;
-    std::vector<std::tuple<std::uint64_t, std::uint64_t, std::uint32_t>> unordered_group_cache;
-
-    if (!(gfai.gfa = fopen(gfaName, "r"))){
-        std::cerr << "Error: couldn't open GFA file " << gfaName << std::endl;
-        exit(1);
-    }
-   
-    tiny_gfaidx_base_entry_t* entry = new tiny_gfaidx_base_entry_t();
-
-    if (gfaFile.is_open()){
-        while(std::getline(gfaFile, line)){
-            line_length = line.length();
-            if (line[0] == 'S'){
-                std::vector<std::string> splits = pliib::split(line, '\t');
-                entry->type = SEQUENCE;
-                entry->iden_len = splits[1].length();
-                entry->iden = new char[ entry->iden_len + 1 ];
-                std::strcpy(entry->iden, splits[1].c_str());
-                entry->iden[entry->iden_len] = '\0';
-                entry->offset = offset;
-                entry->line_char_len = line_length;
-                gfai.add(entry);
-                entry = new tiny_gfaidx_base_entry_t();
+        tiny_gfaidx_base_entry_t(const char* line, std::size_t offset, std::size_t line_len){
+            this->type = line[0];
+            std::size_t ind = 2;
+            while (line[ind] != '\t'){
+                ++ind;
             }
-            
-            offset += line_length + 1;
+            pliib::substr(line, 2, ind+1, this->iden);
+            if (this->type == 'E' || this->type == 'L'){
+                    char* mutable_line = const_cast<char*>(line);
+                    tgfa::edge_elem e(mutable_line);
+                    pliib::strcopy(e.source_id, edge_source);
+                    pliib::strcopy(e.sink_id, edge_sink);
+                    this->from_end = e.source_orientation_forward;
+                    this->to_start = e.sink_orientation_forward;
+                    pliib::strcopy(make_edge_id().c_str(), iden);
+            }
+            this->iden_len = ind-2;
+            this->offset = offset;
+            this->line_char_len = line_len;
         }
-    }
+        std::string make_edge_id(){
+            std::ostringstream st;
+            st << edge_source << ";" <<
+                (from_end ? "+" : "-") << ";" <<
+                edge_sink << ";" << (to_start ? "+" : "-");
+            return st.str();
+        }
 
-    gfaFile.close();
+        inline std::string to_string(){
+            std::ostringstream st;
+            write_to_stream(st);
+            return st.str();
+        }
 
-};
+        std::ostream& write_to_stream(std::ostream& os){
+            os << type << '\t' << iden << '\t';
+            if (type == 'E' || type == 'L'){
+                os << make_edge_id() << '\t';
+            }
+            os << offset << '\t' << line_char_len;
+            return os;
+        }
 
-inline void writeGFAIDX(const char* gfaName, const tiny_gfaidx_t& gfai ){
-    std::string gfn(gfaName);
-    gfn = gfn + ".gfai";
-    std::ofstream ofi( gfn.c_str() );
-    if (ofi.good()){
-        gfai.write(ofi);
-    }
-};
+    };
 
-inline bool checkGFAIDXFileExists(const char* fileName){
-    struct stat statFileInfo;
-    std::string indexFileName(fileName);
-    indexFileName = indexFileName + ".gfai";
-    return stat(indexFileName.c_str(), &statFileInfo) == 0;
-};
+    struct custom_gfaidx_entry_t_comparator
+    {
+        bool operator()(tiny_gfaidx_base_entry_t const *a, tiny_gfaidx_base_entry_t const *b) const
+        {
+            return a->offset < b->offset;
+        }
+    };
 
-inline char* indexFileName(const char* fileName){
-    int len = strlen(fileName);
-    static const char* file_ext = ".gfai";
-    char* ret = new char[len + 6];
-    ret[len + 4] = '\0';
-    strcpy(ret, fileName);
-    strcpy(ret + len, file_ext);
-    return ret;
-};
+    struct custom_base_entry_comparator
+    {
+        bool operator()(tiny_gfaidx_base_entry_t const * a, tiny_gfaidx_base_entry_t const * b){
+            return std::strcmp(a->iden, b->iden) < 0;
+        }
+    };
 
-inline void parseGFAIDX(const char* GFAFileName, tiny_gfaidx_t& gfaidx){
-    std::ifstream ifi;
-    char* ifn = indexFileName(GFAFileName);
-    ifi.open( (const char*) ifn);
+    struct tiny_gfaidx_t{
+        std::map<std::string, tiny_gfaidx_base_entry_t*> header_map;
+        std::map<std::string, tiny_gfaidx_base_entry_t*> seq_map;
+        std::map<std::string, tiny_gfaidx_base_entry_t*> edge_map;
+        std::map<std::string, tiny_gfaidx_base_entry_t*> group_map;
+        FILE* gfa = NULL;
+        std::uint64_t edge_counter = 0;
+        std::uint64_t node_counter = 0;
+        std::uint64_t group_counter = 0;
 
-    if (!(gfaidx.gfa = fopen(GFAFileName, "r"))){
-        std::cerr << "Error: couldn't open gfa file " << GFAFileName << std::endl;
-    }
+        void close(){
+            if (gfa != NULL){
+                fclose(gfa);
+            }
+        };
 
-    if (ifi.is_open()){
+        ~tiny_gfaidx_t(){
+            close();
+        };
+        void add(tiny_gfaidx_base_entry_t*& entry){
+            if (entry->type == 'S'){
+                seq_map[entry->iden] = entry;
+            }
+            else if (entry->type == 'H'){
+                //header_map[entry->iden] = entry;
+            }
+            else if (entry->type == 'E'){
+                edge_map[entry->iden] = entry;
+            }
+            else if (entry->type == 'L'){
+                edge_map[entry->iden] = entry;
+            }
+            else if (entry->type == 'U'){
+                group_map[entry->iden] = entry;
+            }
+            else if (entry->type == 'O'){
+                group_map[entry->iden] = entry;
+            }
+            else if (entry->type == 'P'){
+                group_map[entry->iden] = entry;
+            }
+        };
+
+        void get_sequence_by_id(std::string sequence_name, tgfa::sequence_elem& seq){
+            char* sname = const_cast<char*>(sequence_name.c_str());
+            if (has_sequence(sname)){
+                tiny_gfaidx_base_entry_t* entry = seq_map.at(sname);
+                char* seqln = new char[entry->line_char_len + 1];
+                fseek64(gfa, entry->line_char_len, SEEK_SET);
+                if (fread(seqln, sizeof(char), entry->line_char_len, gfa)){
+                    seq.clear();
+                    seq = tgfa::sequence_elem(seqln, GLOBAL_TGFI_SPEC);
+                }
+            }
+        }
+        void get_edge_by_id(std::string edge_name, tgfa::edge_elem& edge){
+            if (has_edge(edge_name)){
+                tiny_gfaidx_base_entry_t* entry = edge_map.at(edge_name);
+                char* edgeln = new char[entry->line_char_len + 1];
+                fseek64(gfa, entry->line_char_len, SEEK_SET);
+                if (fread(edgeln, sizeof(char), entry->line_char_len, gfa)){
+                    edge = tgfa::edge_elem(edgeln);
+                }
+            }
+        }
+        void get_edge_by_source(std::string source_name, tgfa::edge_elem& edge){
+            std::cerr << "Not implemented [ get_edge_by_source ]" << std::endl;
+            exit(9);
+        }
+        void get_edge_by_sink(std::string sink_name, tgfa::edge_elem& edge){
+            std::cerr << "Not implemented [ get_edge_by_sink ]" << std::endl;
+            exit(9); 
+        }
+        void get_edge_by_link(std::string source_name, bool from_end,
+                std::string sink_name, bool to_start,
+                tgfa::edge_elem& edge){
+            std::cerr << "Not implemented [ get_edge_by_link ]" << std::endl;
+            exit(9);
+        }
+        void get_group_by_id(std::string group_name, tgfa::group_elem& group){
+            if (has_group(group_name)){
+                tiny_gfaidx_base_entry_t* entry = group_map.at(group_name);
+                char* groupln = new char[entry->line_char_len + 1];
+                fseek64(gfa, entry->line_char_len, SEEK_SET);
+                if (fread(groupln, sizeof(char), entry->line_char_len, gfa)){
+                    group = tgfa::group_elem(groupln);
+                }
+            }
+        }
+
+        bool has_sequence(const std::string& sequence_name) const {
+            return has_sequence(sequence_name.c_str());
+        }
+        bool has_sequence(const char* sequence_name) const {
+            return seq_map.find(sequence_name) != seq_map.end(); 
+        }
+
+        bool has_edge(const std::string& edge_name) const {
+            return has_edge(edge_name.c_str());
+        }
+        bool has_edge(const char* edge_name) const {
+            return edge_map.find(edge_name) != edge_map.end();
+        }
+
+        bool has_group(const std::string& group_name) const {
+            return has_group(group_name.c_str());
+        }
+        bool has_group(const char* group_name) const {
+            return group_map.find(group_name) != group_map.end();
+        }
+
+        std::ostream& write(std::ostream& os) const {
+            for (auto& h : header_map){
+                (h.second)->write_to_stream(os);
+                os << std::endl;
+            }
+            for (auto& s : seq_map){
+                (s.second)->write_to_stream(os);
+                os << std::endl;
+            }
+            for (auto& e : edge_map){
+                (e.second)->write_to_stream(os);
+                os << std::endl;
+            }
+            for (auto& g : group_map){
+                (g.second)->write_to_stream(os);
+                os << std::endl;
+            }
+            return os;
+        }
+
+        void write(const char* filename) const{
+            std::ofstream ofi;
+            ofi.open(filename);
+            if (ofi.good()){
+                write(ofi);
+            }
+        };
+
+    };
+
+
+    inline void create_gfa_index(const char* gfaName, tiny_gfaidx_t& gfai){
+        std::uint64_t line_number = 0;
+        std::uint64_t base_seq_id = 0;
+        std::uint64_t base_edge_id = 0;
+        std::uint64_t offset = 0;
+        std::size_t line_length = 0;
+
+        std::ifstream gfaFile;
+        gfaFile.open(gfaName);
+
+
+        if (!(gfai.gfa = fopen(gfaName, "r"))){
+            std::cerr << "Error: couldn't open GFA file " << gfaName << std::endl;
+            exit(1);
+        }
+
+        //tiny_gfaidx_base_entry_t* entry = new tiny_gfaidx_base_entry_t();
+
         std::string line;
-        while(std::getline(ifi, line)){
-            if (line[0] == 'S'){
-                std::vector<std::string> splits = pliib::split(line.c_str(), '\t');
-                tiny_gfaidx_base_entry_t* t = new tiny_gfaidx_base_entry_t(splits);
-                gfaidx.add(t);
+        if (gfaFile.is_open()){
+            while(std::getline(gfaFile, line)){
+	            line_length = line.length();
+                if (line[0] == 'S' || line[0] == 'H' ||
+                        line[0] == 'E' || line[0] == 'L' ||
+                        line[0] == 'P' || line[0] == 'O' ||
+                        line[0] == 'U'){
+                    tiny_gfaidx_base_entry_t* entry = new tiny_gfaidx_base_entry_t(line.c_str(), offset, line_length);
+
+                    gfai.add(entry);
+                }
+                //int line_type = tgfa::determine_line_type(line.c_str());
+                offset += line_length + 1;
             }
         }
-    }
-    else{
-        std::cerr << "Couldn't open index " << GFAFileName << "." << std::endl;
-    }
-    
-    ifi.close();
-    delete [] ifn;
-};
 
-inline void getSequence( const tiny_gfaidx_t& gfai, const char* seqname, char*& seq){
-    
-    tiny_gfaidx_base_entry_t* entry;
-    if (gfai.hasSequenceID(seqname)){
-        gfai.getSequenceEntry(seqname, entry);
-        std::uint32_t sz = entry->line_char_len;
-        seq = new char[sz + 1];
-        fseek64(gfai.gfa, entry->offset, SEEK_SET);
-        if (fread(seq, sizeof(char), sz, gfai.gfa)){
-           seq[sz] = '\0';
+        gfaFile.close();
+
+    };
+
+    inline void write_gfa_index(const char* gfaName, const tiny_gfaidx_t& gfai ){
+        std::string gfn(gfaName);
+        gfn = gfn + ".gfai";
+        std::ofstream ofi( gfn.c_str() );
+        if (ofi.good()){
+            gfai.write(ofi);
+        }
+    };
+
+    inline bool has_gfa_index(const char* fileName){
+        struct stat statFileInfo;
+        std::string indexFileName(fileName);
+        indexFileName = indexFileName + ".gfai";
+        return stat(indexFileName.c_str(), &statFileInfo) == 0;
+    };
+
+    inline char* get_index_file_name(const char* fileName){
+        int len = strlen(fileName);
+        static const char* file_ext = ".gfai";
+        char* ret = new char[len + 6];
+        ret[len + 4] = '\0';
+        strcpy(ret, fileName);
+        strcpy(ret + len, file_ext);
+        return ret;
+    };
+
+    inline void parse_gfa_index(const char* GFAFileName, tiny_gfaidx_t& gfaidx){
+        std::ifstream ifi;
+        char* ifn = get_index_file_name(GFAFileName);
+        ifi.open( (const char*) ifn);
+
+        if (!(gfaidx.gfa = fopen(GFAFileName, "r"))){
+            std::cerr << "Error: couldn't open gfa file " << GFAFileName << std::endl;
         }
 
-    }
-    else{
-        std::cerr << "No sequence ID " << seqname << " found." << std::endl;
-    }
-};
+        if (ifi.is_open()){
+            std::string line;
+            while(std::getline(ifi, line)){
+                    tiny_gfaidx_base_entry_t* t = new tiny_gfaidx_base_entry_t(line);
+                    gfaidx.add(t);
+            }
+        }
+        else{
+            std::cerr << "Couldn't open index " << GFAFileName << "." << std::endl;
+        }
 
+        ifi.close();
+        delete [] ifn;
+    };
 
 }
 
