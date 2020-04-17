@@ -7,6 +7,8 @@
 int main_stats(int argc, char** argv){
     std::string gfile;
 
+    double spec = 2.0;
+
     if (argc <= 2){
         std::cerr << "Please provide a GFA file." << std::endl;
         return -1;
@@ -30,13 +32,15 @@ int main_stats(int argc, char** argv){
         };
     
         int option_index = 0;
-        c = getopt_long(argc, argv, "hpaAnel", long_options, &option_index);
+        c = getopt_long(argc, argv, "hpaAnelS:", long_options, &option_index);
         if (c == -1){
             break;
         }
 
         switch (c){
-
+            case 'S':
+                spec = std::stoull(optarg);
+                break;
             case '?':
             case 'h':
                 // nodes, edges, all stats, edges, paths
@@ -50,16 +54,20 @@ int main_stats(int argc, char** argv){
 
     tgfa::gfa_stat_t stats;
 
-    auto s_func = [&](tgfa::sequence_elem s){std::cout << "S:" << s.seq_id << ":" << s.seq_length << std::endl;};
-    auto e_func = [](tgfa::edge_elem e){};
-    auto g_func = [](tgfa::group_elem g){};
+    //auto s_func = [&](tgfa::sequence_elem s){std::cout << "S:" << s.id << ":" << s.seq_length << std::endl;};
+    auto s_func = [&](const tgfa::sequence_elem& s){};
+    auto e_func = [](const tgfa::edge_elem& e){};
+    auto g_func = [](const tgfa::group_elem& g){};
 
     parse_gfa_file(gfile.c_str(),
             s_func,
             e_func,
             g_func,
-            stats);
+            stats,
+            spec);
     std::cout << stats.to_string() << std::endl;
+
+    return 0;
 
 }
 
